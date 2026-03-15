@@ -1,0 +1,52 @@
+{
+  "inverters": [
+    {
+      "serial": "112345678901",
+      "name": "HM-800",
+      "data_age": 4,
+      "poll_enabled": true,
+      "reachable": true,
+      "producing": true,
+      "limit_relative": 100.0,
+      "limit_absolute": 800.0,
+      "AC": {
+        "0": {
+          "Power": {"v": 450.5, "u": "W", "d": 1},
+          "Voltage": {"v": 230.1, "u": "V", "d": 1},
+          "Current": {"v": 1.96, "u": "A", "d": 2},
+          "Frequency": {"v": 50.01, "u": "Hz", "d": 2},
+          "PowerFactor": {"v": 0.99, "u": "", "d": 2},
+          "ReactivePower": {"v": 5.2, "u": "var", "d": 1}
+        }
+      },
+      "DC": {
+        "0": {
+          "name": {"u": "String 1"},
+          "Power": {"v": 230.1, "u": "W", "d": 1},
+          "Voltage": {"v": 35.2, "u": "V", "d": 1},
+          "Current": {"v": 6.54, "u": "A", "d": 2},
+          "YieldDay": {"v": 620.0, "u": "Wh", "d": 0},
+          "YieldTotal": {"v": 28.5, "u": "kWh", "d": 3},
+          "Irradiation": {"v": 57.5, "u": "%", "d": 1}
+        },
+        "1": {
+          "name": {"u": "String 2"},
+          "Power": {"v": 220.4, "u": "W", "d": 1},
+          "Voltage": {"v": 34.8, "u": "V", "d": 1},
+          "Current": {"v": 6.33, "u": "A", "d": 2},
+          "YieldDay": {"v": 614.0, "u": "Wh", "d": 0},
+          "YieldTotal": {"v": 28.3, "u": "kWh", "d": 3},
+          "Irradiation": {"v": 55.1, "u": "%", "d": 1}
+        }
+      },
+      "INV": {
+        "0": {
+          "Temperature": {"v": 32.5, "u": "\u00b0C", "d": 1},
+          "Efficiency": {"v": 96.8, "u": "%", "d": 1},
+          "YieldDay": {"v": 1234.0, "u": "Wh", "d": 0},
+          "YieldTotal": {"v": 56.789, "u": "kWh", "d": 3}
+        }
+      }
+    }
+  ]
+}

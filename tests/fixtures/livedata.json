@@ -1,0 +1,24 @@
+{
+  "inverters": [
+    {
+      "serial": "112345678901",
+      "name": "HM-800",
+      "data_age": 4,
+      "poll_enabled": true,
+      "reachable": true,
+      "producing": true,
+      "limit_relative": 100.0,
+      "limit_absolute": 800.0
+    }
+  ],
+  "total": {
+    "Power": {"v": 450.5, "u": "W", "d": 1},
+    "YieldDay": {"v": 1234.0, "u": "Wh", "d": 0},
+    "YieldTotal": {"v": 56.789, "u": "kWh", "d": 3}
+  },
+  "hints": {
+    "time_sync": true,
+    "radio_problem": false,
+    "default_password": false
+  }
+}
