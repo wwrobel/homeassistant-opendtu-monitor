@@ -1,0 +1,28 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to OpenDTU",
+        "description": "Enter the connection details for your OpenDTU instance.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "scan_interval": "Update interval (seconds)"
+        },
+        "data_description": {
+          "host": "IP address or hostname of your OpenDTU device",
+          "port": "HTTP port (default: 80)",
+          "scan_interval": "How often to poll for new data (default: 30s)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to OpenDTU. Check the host and port.",
+      "api_error": "Error communicating with OpenDTU API.",
+      "unknown": "An unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "This OpenDTU instance is already configured."
+    }
+  }
+}
