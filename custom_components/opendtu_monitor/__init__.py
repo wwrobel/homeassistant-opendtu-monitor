@@ -58,32 +58,47 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def _async_register_lovelace_resource(hass: HomeAssistant) -> None:
     """Register the card JS as a Lovelace resource."""
-    # Use the frontend API to add the resource
-    from homeassistant.components.lovelace import (
-        DOMAIN as LOVELACE_DOMAIN,
-    )
-    from homeassistant.components.lovelace.resources import (
-        ResourceStorageCollection,
-    )
-
-    # Wait for lovelace to be set up
-    lovelace_data = hass.data.get(LOVELACE_DOMAIN)
-    if lovelace_data is None:
-        _LOGGER.warning("Lovelace not available, cannot register card resource")
+    try:
+        from homeassistant.components.lovelace.resources import (
+            ResourceStorageCollection,
+        )
+    except ImportError:
+        _LOGGER.debug("Lovelace resources module not available, skipping auto-registration")
         return
 
-    resources = lovelace_data.get("resources")
-    if resources is None or not isinstance(resources, ResourceStorageCollection):
+    # Find the ResourceStorageCollection in hass.data
+    resources = None
+    for value in hass.data.values():
+        if isinstance(value, ResourceStorageCollection):
+            resources = value
+            break
+
+    if resources is None:
+        # Try accessing via lovelace data object attributes
+        try:
+            from homeassistant.components.lovelace import DOMAIN as LOVELACE_DOMAIN
+            lovelace_data = hass.data.get(LOVELACE_DOMAIN)
+            if lovelace_data is not None and hasattr(lovelace_data, "resources"):
+                res = lovelace_data.resources
+                if isinstance(res, ResourceStorageCollection):
+                    resources = res
+        except Exception:
+            pass
+
+    if resources is None:
         _LOGGER.debug("Lovelace resources not available (YAML mode?), skipping auto-registration")
         return
 
     # Check if already registered
     for resource in resources.async_items():
-        if resource.get("url", "").startswith(CARD_URL):
+        if isinstance(resource, dict) and resource.get("url", "").startswith(CARD_URL):
             return
 
-    await resources.async_create_item({"res_type": "module", "url": CARD_URL})
-    _LOGGER.info("Registered OpenDTU Monitor card as Lovelace resource")
+    try:
+        await resources.async_create_item({"res_type": "module", "url": CARD_URL})
+        _LOGGER.info("Registered OpenDTU Monitor card as Lovelace resource")
+    except Exception:
+        _LOGGER.debug("Could not auto-register Lovelace resource", exc_info=True)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
