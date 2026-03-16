@@ -24,6 +24,9 @@ def auto_enable_custom_integrations(enable_custom_integrations):
 async def test_user_flow_success(hass: HomeAssistant, livedata_response):
     """Test successful user config flow."""
     with patch(
+        "custom_components.opendtu_monitor.async_setup_entry",
+        return_value=True,
+    ), patch(
         "custom_components.opendtu_monitor.config_flow.OpenDTUApiClient",
     ) as mock_client_class:
         mock_client = AsyncMock()
@@ -99,6 +102,9 @@ async def test_user_flow_api_error(hass: HomeAssistant):
 async def test_user_flow_already_configured(hass: HomeAssistant, livedata_response):
     """Test config flow when already configured."""
     with patch(
+        "custom_components.opendtu_monitor.async_setup_entry",
+        return_value=True,
+    ), patch(
         "custom_components.opendtu_monitor.config_flow.OpenDTUApiClient",
     ) as mock_client_class:
         mock_client = AsyncMock()
