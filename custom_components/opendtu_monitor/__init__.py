@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -18,7 +19,6 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
-CARD_PATH = "/opendtu_monitor/opendtu-monitor-card.js"
 CARD_URL = "/opendtu_monitor/opendtu-monitor-card.js"
 
 
@@ -43,9 +43,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Register the Lovelace card static path
+    # Register the Lovelace card static path (once)
     www_dir = Path(__file__).parent / "www"
-    hass.http.register_static_path(CARD_URL, str(www_dir / "opendtu-monitor-card.js"), cache_headers=False)
+    await hass.http.async_register_static_paths([
+        StaticPathConfig(CARD_URL, str(www_dir / "opendtu-monitor-card.js"), cache_headers=False),
+    ])
 
     return True
 
