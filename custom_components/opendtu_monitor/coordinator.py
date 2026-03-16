@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from datetime import timedelta
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -23,12 +24,14 @@ class OpenDTUDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         hass: HomeAssistant,
         client: OpenDTUApiClient,
         scan_interval: int,
+        config_entry: ConfigEntry | None = None,
     ) -> None:
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
             update_interval=timedelta(seconds=scan_interval),
+            config_entry=config_entry,
         )
         self.client = client
 
