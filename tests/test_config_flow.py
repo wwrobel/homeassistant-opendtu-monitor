@@ -27,6 +27,11 @@ async def test_user_flow_success(hass: HomeAssistant, livedata_response):
         "custom_components.opendtu_monitor.async_setup_entry",
         return_value=True,
     ), patch(
+        "custom_components.opendtu_monitor.async_unload_entry",
+        return_value=True,
+    ), patch(
+        "custom_components.opendtu_monitor.config_flow.async_get_clientsession",
+    ), patch(
         "custom_components.opendtu_monitor.config_flow.OpenDTUApiClient",
     ) as mock_client_class:
         mock_client = AsyncMock()
@@ -60,6 +65,8 @@ async def test_user_flow_success(hass: HomeAssistant, livedata_response):
 async def test_user_flow_connection_error(hass: HomeAssistant):
     """Test config flow with connection error."""
     with patch(
+        "custom_components.opendtu_monitor.config_flow.async_get_clientsession",
+    ), patch(
         "custom_components.opendtu_monitor.config_flow.OpenDTUApiClient",
     ) as mock_client_class:
         mock_client = AsyncMock()
@@ -81,6 +88,8 @@ async def test_user_flow_connection_error(hass: HomeAssistant):
 async def test_user_flow_api_error(hass: HomeAssistant):
     """Test config flow with API error."""
     with patch(
+        "custom_components.opendtu_monitor.config_flow.async_get_clientsession",
+    ), patch(
         "custom_components.opendtu_monitor.config_flow.OpenDTUApiClient",
     ) as mock_client_class:
         mock_client = AsyncMock()
@@ -104,6 +113,11 @@ async def test_user_flow_already_configured(hass: HomeAssistant, livedata_respon
     with patch(
         "custom_components.opendtu_monitor.async_setup_entry",
         return_value=True,
+    ), patch(
+        "custom_components.opendtu_monitor.async_unload_entry",
+        return_value=True,
+    ), patch(
+        "custom_components.opendtu_monitor.config_flow.async_get_clientsession",
     ), patch(
         "custom_components.opendtu_monitor.config_flow.OpenDTUApiClient",
     ) as mock_client_class:
