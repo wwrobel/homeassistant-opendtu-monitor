@@ -43,11 +43,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Register the Lovelace card static path (once)
-    www_dir = Path(__file__).parent / "www"
-    await hass.http.async_register_static_paths([
-        StaticPathConfig(CARD_URL, str(www_dir / "opendtu-monitor-card.js"), cache_headers=False),
-    ])
+    # Register the Lovelace card static path (only on first entry)
+    if not hass.data[DOMAIN].get("_card_registered"):
+        www_dir = Path(__file__).parent / "www"
+        await hass.http.async_register_static_paths([
+            StaticPathConfig(CARD_URL, str(www_dir / "opendtu-monitor-card.js"), cache_headers=False),
+        ])
+        hass.data[DOMAIN]["_card_registered"] = True
 
     return True
 
