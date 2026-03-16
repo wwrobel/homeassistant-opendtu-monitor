@@ -282,10 +282,7 @@ class OpenDTUSensor(OpenDTUEntity, SensorEntity):
         """Return True if entity is available."""
         if not super().available:
             return False
-        data = self._inverter_data
-        if data is None:
-            return False
-        return data.get("reachable", False)
+        return self._inverter_data is not None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:

@@ -43,15 +43,47 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Register the Lovelace card static path (only on first entry)
+    # Register the Lovelace card static path and resource (only once)
     if not hass.data[DOMAIN].get("_card_registered"):
         www_dir = Path(__file__).parent / "www"
         await hass.http.async_register_static_paths([
             StaticPathConfig(CARD_URL, str(www_dir / "opendtu-monitor-card.js"), cache_headers=False),
         ])
+        # Register as Lovelace resource so the card is available in dashboards
+        await _async_register_lovelace_resource(hass)
         hass.data[DOMAIN]["_card_registered"] = True
 
     return True
+
+
+async def _async_register_lovelace_resource(hass: HomeAssistant) -> None:
+    """Register the card JS as a Lovelace resource."""
+    # Use the frontend API to add the resource
+    from homeassistant.components.lovelace import (
+        DOMAIN as LOVELACE_DOMAIN,
+    )
+    from homeassistant.components.lovelace.resources import (
+        ResourceStorageCollection,
+    )
+
+    # Wait for lovelace to be set up
+    lovelace_data = hass.data.get(LOVELACE_DOMAIN)
+    if lovelace_data is None:
+        _LOGGER.warning("Lovelace not available, cannot register card resource")
+        return
+
+    resources = lovelace_data.get("resources")
+    if resources is None or not isinstance(resources, ResourceStorageCollection):
+        _LOGGER.debug("Lovelace resources not available (YAML mode?), skipping auto-registration")
+        return
+
+    # Check if already registered
+    for resource in resources.async_items():
+        if resource.get("url", "").startswith(CARD_URL):
+            return
+
+    await resources.async_create_item({"res_type": "module", "url": CARD_URL})
+    _LOGGER.info("Registered OpenDTU Monitor card as Lovelace resource")
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

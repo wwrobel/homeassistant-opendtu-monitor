@@ -139,8 +139,8 @@ def test_sensor_available_when_reachable(coordinator_with_data):
     assert sensor.available is True
 
 
-def test_sensor_unavailable_when_unreachable(coordinator_with_data):
-    """Test sensor is unavailable when inverter is unreachable."""
+def test_sensor_available_when_unreachable(coordinator_with_data):
+    """Test sensor is still available when inverter is unreachable (e.g. at night)."""
     coordinator_with_data.data["inverters"][0]["reachable"] = False
 
     desc = AC_SENSORS[0]
@@ -148,7 +148,8 @@ def test_sensor_unavailable_when_unreachable(coordinator_with_data):
         coordinator_with_data, "112345678901", "HM-800", desc
     )
 
-    assert sensor.available is False
+    # Sensor stays available - reachable only affects attributes, not availability
+    assert sensor.available is True
 
 
 def test_sensor_unavailable_for_unknown_serial(coordinator_with_data):
