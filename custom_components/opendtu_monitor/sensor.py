@@ -261,6 +261,10 @@ class OpenDTUSensor(OpenDTUEntity, SensorEntity):
         self._attr_unique_id = f"{inverter_serial}_{description.key}"
         if string_label:
             self._attr_name = f"{string_label} {description.field}"
+        elif description.section == "AC":
+            self._attr_name = f"AC {description.field}"
+        elif description.section == "INV":
+            self._attr_name = description.field
         else:
             self._attr_name = description.field
 
@@ -290,8 +294,16 @@ class OpenDTUSensor(OpenDTUEntity, SensorEntity):
         data = self._inverter_data
         if data is None:
             return None
-        return {
+        attrs = {
             "serial": self._serial,
+            "inverter_name": self._inverter_name,
+            "section": self.entity_description.section,
+            "field": self.entity_description.field,
             "producing": data.get("producing", False),
             "reachable": data.get("reachable", False),
         }
+        if self.entity_description.section == "DC":
+            attrs["string_channel"] = self.entity_description.channel
+        if self._string_label:
+            attrs["string_label"] = self._string_label
+        return attrs

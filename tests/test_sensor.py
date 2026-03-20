@@ -93,7 +93,7 @@ def test_ac_sensor_entity(coordinator_with_data):
 
     assert sensor.unique_id == "112345678901_ac_power"
     assert sensor.native_value == 450.5
-    assert sensor.name == "Power"
+    assert sensor.name == "AC Power"
 
 
 def test_dc_sensor_entity(coordinator_with_data):
@@ -173,6 +173,9 @@ def test_sensor_extra_attributes(coordinator_with_data):
     attrs = sensor.extra_state_attributes
     assert attrs is not None
     assert attrs["serial"] == "112345678901"
+    assert attrs["inverter_name"] == "HM-800"
+    assert attrs["section"] == "AC"
+    assert attrs["field"] == "Power"
     assert attrs["producing"] is True
     assert attrs["reachable"] is True
 

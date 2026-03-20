@@ -23,14 +23,14 @@ export class PanelTile extends LitElement {
           : ""}
         <span class="panel-power ${status}">${powerStr}</span>
         ${this.showYield && this.data.yieldDay != null
-          ? html`<span class="panel-yield">${this.data.yieldDay} Wh today</span>`
+          ? html`<span class="panel-yield">${Math.round(this.data.yieldDay)} Wh today</span>`
           : ""}
         <div class="panel-details">
           ${this.data.voltage != null
-            ? html`<span>${this.data.voltage}V</span>`
+            ? html`<span>${this.data.voltage.toFixed(1)}V</span>`
             : ""}
           ${this.data.current != null
-            ? html`<span>${this.data.current}A</span>`
+            ? html`<span>${this.data.current.toFixed(2)}A</span>`
             : ""}
         </div>
       </div>

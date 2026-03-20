@@ -1,3 +1,24 @@
+export interface OpenDTUMonitorCardConfig {
+  type: string;
+  title?: string;
+  layout: "grid" | "freeform";
+  columns: number;
+  show_labels: boolean;
+  show_yield: boolean;
+  // Optional: override auto-discovery
+  inverters?: InverterConfig[];
+  background?: {
+    image: string;
+    width: number;
+    height: number;
+  };
+}
+
+export interface InverterConfig {
+  serial: string;
+  panels: PanelConfig[];
+}
+
 export interface PanelConfig {
   string: number;
   label: string;
@@ -10,26 +31,6 @@ export interface PanelConfig {
   width?: number;
   height?: number;
   rotation?: number;
-}
-
-export interface InverterConfig {
-  serial: string;
-  panels: PanelConfig[];
-}
-
-export interface OpenDTUMonitorCardConfig {
-  type: string;
-  title?: string;
-  layout: "grid" | "freeform";
-  columns: number;
-  show_labels: boolean;
-  show_yield: boolean;
-  inverters: InverterConfig[];
-  background?: {
-    image: string;
-    width: number;
-    height: number;
-  };
 }
 
 export interface HomeAssistant {
@@ -47,13 +48,30 @@ export interface HassEntity {
 
 export interface PanelData {
   serial: string;
-  string: number;
+  inverterName: string;
+  stringChannel: string;
   label: string;
   power: number | null;
   voltage: number | null;
   current: number | null;
   yieldDay: number | null;
   yieldTotal: number | null;
+  irradiation: number | null;
   producing: boolean;
   reachable: boolean;
+}
+
+/** Discovered inverter info from hass.states */
+export interface DiscoveredInverter {
+  serial: string;
+  name: string;
+  strings: DiscoveredString[];
+  producing: boolean;
+  reachable: boolean;
+}
+
+export interface DiscoveredString {
+  channel: string;
+  label: string;
+  entities: Record<string, string>; // field -> entity_id mapping
 }

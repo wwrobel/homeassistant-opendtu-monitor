@@ -1,7 +1,12 @@
 import { LitElement, html, css, TemplateResult, CSSResultGroup } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { cardStyles } from "./styles.js";
-import type { HomeAssistant, OpenDTUMonitorCardConfig, PanelData, PanelConfig, InverterConfig } from "./types.js";
+import type {
+  HomeAssistant,
+  OpenDTUMonitorCardConfig,
+  PanelData,
+  DiscoveredInverter,
+} from "./types.js";
 import "./components/panel-tile.js";
 import "./editor.js";
 
@@ -14,6 +19,23 @@ export class OpenDTUMonitorCard extends LitElement {
         padding: 32px;
         text-align: center;
         color: var(--secondary-text-color, #666);
+      }
+      .inverter-group-header {
+        font-size: 0.9em;
+        font-weight: 500;
+        color: var(--secondary-text-color);
+        padding: 8px 0 4px;
+      }
+      .ac-summary {
+        font-size: 0.8em;
+        color: var(--secondary-text-color);
+        padding: 4px 0 8px;
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .ac-summary span {
+        white-space: nowrap;
       }
     `,
   ];
@@ -32,7 +54,6 @@ export class OpenDTUMonitorCard extends LitElement {
       columns: 4,
       show_labels: true,
       show_yield: true,
-      inverters: [],
     };
   }
 
@@ -46,19 +67,13 @@ export class OpenDTUMonitorCard extends LitElement {
         columns: 4,
         show_labels: true,
         show_yield: true,
-        inverters: [],
       },
       ...config,
     };
   }
 
   public getCardSize(): number {
-    const totalPanels = (this._config.inverters || []).reduce(
-      (sum, inv) => sum + (inv.panels || []).length,
-      0
-    );
-    const rows = Math.ceil(totalPanels / (this._config.columns || 4));
-    return Math.max(rows + 1, 2);
+    return 3;
   }
 
   protected render(): TemplateResult {
@@ -66,183 +81,203 @@ export class OpenDTUMonitorCard extends LitElement {
       return html``;
     }
 
-    const panels = this._collectPanelData();
+    const inverters = this._discoverInverters();
+
+    if (inverters.length === 0) {
+      return html`
+        <ha-card>
+          ${this._config.title
+            ? html`<div class="card-header">${this._config.title}</div>`
+            : ""}
+          <div class="empty-state">
+            No OpenDTU Monitor sensors found. Make sure the integration is configured.
+          </div>
+        </ha-card>
+      `;
+    }
+
+    const panels = this._buildPanelData(inverters);
 
     return html`
       <ha-card>
         ${this._config.title
           ? html`<div class="card-header">${this._config.title}</div>`
           : ""}
-        ${panels.length === 0
-          ? html`<div class="empty-state">No panels configured. Edit the card to add inverters and panels.</div>`
-          : this._config.layout === "freeform"
-            ? this._renderFreeform(panels)
-            : this._renderGrid(panels)}
+        ${inverters.length > 1
+          ? this._renderMultiInverterGrid(inverters)
+          : this._renderSimpleGrid(panels)}
       </ha-card>
     `;
   }
 
-  private _renderGrid(panels: { data: PanelData; config: PanelConfig }[]): TemplateResult {
+  private _renderSimpleGrid(panels: PanelData[]): TemplateResult {
     const columns = this._config.columns || 4;
-
-    // Determine grid dimensions from panel positions
-    let maxRow = 0;
-    let maxCol = 0;
-    for (const p of panels) {
-      maxRow = Math.max(maxRow, p.config.row);
-      maxCol = Math.max(maxCol, p.config.col);
-    }
-    const gridCols = Math.max(columns, maxCol + 1);
-
-    // Build position map
-    const posMap = new Map<string, PanelData>();
-    for (const p of panels) {
-      posMap.set(`${p.config.row}-${p.config.col}`, p.data);
-    }
-
-    const rows: TemplateResult[] = [];
-    for (let r = 0; r <= maxRow; r++) {
-      const cells: TemplateResult[] = [];
-      for (let c = 0; c < gridCols; c++) {
-        const data = posMap.get(`${r}-${c}`);
-        if (data) {
-          cells.push(html`
+    return html`
+      <div class="grid-container" style="grid-template-columns: repeat(${columns}, 1fr)">
+        ${panels.map(
+          (p) => html`
             <opendtu-panel-tile
-              .data=${data}
+              .data=${p}
               .showLabel=${this._config.show_labels}
               .showYield=${this._config.show_yield}
             ></opendtu-panel-tile>
-          `);
-        } else {
-          cells.push(html`<div></div>`);
-        }
-      }
-      rows.push(...cells);
-    }
-
-    return html`
-      <div
-        class="grid-container"
-        style="grid-template-columns: repeat(${gridCols}, 1fr)"
-      >
-        ${rows}
+          `
+        )}
       </div>
     `;
   }
 
-  private _renderFreeform(panels: { data: PanelData; config: PanelConfig }[]): TemplateResult {
-    const bg = this._config.background;
-    const containerStyle = bg
-      ? `position: relative; width: 100%; aspect-ratio: ${bg.width}/${bg.height}; background-image: url('${bg.image}'); background-size: contain; background-repeat: no-repeat; background-position: center;`
-      : `position: relative; width: 100%; min-height: 400px;`;
-
+  private _renderMultiInverterGrid(inverters: DiscoveredInverter[]): TemplateResult {
+    const columns = this._config.columns || 4;
     return html`
-      <div class="freeform-container" style="${containerStyle}">
-        ${panels.map((p) => {
-          const x = p.config.x ?? 0;
-          const y = p.config.y ?? 0;
-          const w = p.config.width ?? 100;
-          const h = p.config.height ?? 60;
-          const rot = p.config.rotation ?? 0;
-
-          // Convert pixel positions to percentages if background is defined
-          let style: string;
-          if (bg) {
-            const xPct = (x / bg.width) * 100;
-            const yPct = (y / bg.height) * 100;
-            const wPct = (w / bg.width) * 100;
-            const hPct = (h / bg.height) * 100;
-            style = `position: absolute; left: ${xPct}%; top: ${yPct}%; width: ${wPct}%; height: ${hPct}%; transform: rotate(${rot}deg);`;
-          } else {
-            style = `position: absolute; left: ${x}px; top: ${y}px; width: ${w}px; height: ${h}px; transform: rotate(${rot}deg);`;
-          }
-
-          return html`
-            <div style="${style}">
-              <opendtu-panel-tile
-                .data=${p.data}
-                .showLabel=${this._config.show_labels}
-                .showYield=${this._config.show_yield}
-              ></opendtu-panel-tile>
-            </div>
-          `;
-        })}
-      </div>
+      ${inverters.map((inv) => {
+        const panels = this._buildInverterPanels(inv);
+        const acPower = this._getEntityValue(inv, "AC", "Power");
+        const acVoltage = this._getEntityValue(inv, "AC", "Voltage");
+        const acFrequency = this._getEntityValue(inv, "AC", "Frequency");
+        return html`
+          <div class="inverter-group-header">${inv.name} (${inv.serial})</div>
+          <div class="ac-summary">
+            ${acPower != null ? html`<span>AC: ${Math.round(acPower)} W</span>` : ""}
+            ${acVoltage != null ? html`<span>${acVoltage.toFixed(1)} V</span>` : ""}
+            ${acFrequency != null ? html`<span>${acFrequency.toFixed(1)} Hz</span>` : ""}
+          </div>
+          <div class="grid-container" style="grid-template-columns: repeat(${columns}, 1fr); margin-bottom: 12px;">
+            ${panels.map(
+              (p) => html`
+                <opendtu-panel-tile
+                  .data=${p}
+                  .showLabel=${this._config.show_labels}
+                  .showYield=${this._config.show_yield}
+                ></opendtu-panel-tile>
+              `
+            )}
+          </div>
+        `;
+      })}
     `;
   }
 
-  private _collectPanelData(): { data: PanelData; config: PanelConfig }[] {
-    const result: { data: PanelData; config: PanelConfig }[] = [];
-
-    for (const inv of this._config.inverters || []) {
-      for (const panel of inv.panels || []) {
-        const data = this._getPanelData(inv, panel);
-        result.push({ data, config: panel });
-      }
-    }
-
-    return result;
-  }
-
-  private _getPanelData(inv: InverterConfig, panel: PanelConfig): PanelData {
-    const serial = inv.serial;
-    const stringIdx = panel.string;
-    const prefix = `sensor.opendtu_`;
-
-    // Find entity states matching this inverter + string
-    const power = this._findSensorValue(prefix, serial, `dc_power_string_${stringIdx}`);
-    const voltage = this._findSensorValue(prefix, serial, `dc_voltage_string_${stringIdx}`);
-    const current = this._findSensorValue(prefix, serial, `dc_current_string_${stringIdx}`);
-    const yieldDay = this._findSensorValue(prefix, serial, `dc_yield_day_string_${stringIdx}`);
-    const yieldTotal = this._findSensorValue(prefix, serial, `dc_yield_total_string_${stringIdx}`);
-
-    // Get producing/reachable from any sensor's attributes
-    let producing = false;
-    let reachable = false;
+  /**
+   * Auto-discover all OpenDTU inverters and their strings from hass.states.
+   * Uses entity attributes (serial, section, field, string_channel) set by the backend.
+   */
+  private _discoverInverters(): DiscoveredInverter[] {
+    const inverterMap = new Map<string, DiscoveredInverter>();
 
     for (const entityId of Object.keys(this.hass.states)) {
-      if (entityId.startsWith(prefix)) {
-        const entity = this.hass.states[entityId];
-        if (entity.attributes["serial"] === serial) {
-          producing = entity.attributes["producing"] as boolean || false;
-          reachable = entity.attributes["reachable"] as boolean || false;
-          break;
-        }
-      }
-    }
-
-    return {
-      serial,
-      string: stringIdx,
-      label: panel.label,
-      power,
-      voltage,
-      current,
-      yieldDay,
-      yieldTotal,
-      producing,
-      reachable,
-    };
-  }
-
-  private _findSensorValue(
-    prefix: string,
-    serial: string,
-    sensorKey: string,
-  ): number | null {
-    // Sensor entity IDs: sensor.opendtu_<name>_<key>
-    // We need to match by serial attribute since name may vary
-    for (const entityId of Object.keys(this.hass.states)) {
-      if (!entityId.startsWith(prefix)) continue;
-      if (!entityId.endsWith(`_${sensorKey}`)) continue;
-
       const entity = this.hass.states[entityId];
-      if (entity.attributes["serial"] === serial) {
-        const val = parseFloat(entity.state);
-        return isNaN(val) ? null : val;
+      const serial = entity.attributes["serial"] as string | undefined;
+      const section = entity.attributes["section"] as string | undefined;
+      const field = entity.attributes["field"] as string | undefined;
+
+      if (!serial || !section || !field) continue;
+      // Only process opendtu_monitor entities
+      if (!entityId.startsWith("sensor.")) continue;
+      const inverterName = entity.attributes["inverter_name"] as string | undefined;
+      if (!inverterName) continue;
+
+      if (!inverterMap.has(serial)) {
+        inverterMap.set(serial, {
+          serial,
+          name: inverterName || serial,
+          strings: [],
+          producing: (entity.attributes["producing"] as boolean) || false,
+          reachable: (entity.attributes["reachable"] as boolean) || false,
+        });
+      }
+
+      const inv = inverterMap.get(serial)!;
+
+      // Update producing/reachable from latest entity
+      if (entity.attributes["producing"]) inv.producing = true;
+      if (entity.attributes["reachable"]) inv.reachable = true;
+
+      if (section === "DC") {
+        const channel = String(entity.attributes["string_channel"] ?? "0");
+        const stringLabel = (entity.attributes["string_label"] as string) || `String ${channel}`;
+
+        let str = inv.strings.find((s) => s.channel === channel);
+        if (!str) {
+          str = { channel, label: stringLabel, entities: {} };
+          inv.strings.push(str);
+        }
+        str.entities[field] = entityId;
+      } else {
+        // AC/INV - store under a virtual string "__ac__" or "__inv__"
+        const key = `__${section.toLowerCase()}__`;
+        let str = inv.strings.find((s) => s.channel === key);
+        if (!str) {
+          str = { channel: key, label: section, entities: {} };
+          inv.strings.push(str);
+        }
+        str.entities[field] = entityId;
       }
     }
-    return null;
+
+    // Sort strings: DC strings first (by channel number), then AC/INV
+    for (const inv of inverterMap.values()) {
+      inv.strings.sort((a, b) => {
+        const aIsDC = !a.channel.startsWith("__");
+        const bIsDC = !b.channel.startsWith("__");
+        if (aIsDC && !bIsDC) return -1;
+        if (!aIsDC && bIsDC) return 1;
+        return a.channel.localeCompare(b.channel, undefined, { numeric: true });
+      });
+    }
+
+    return [...inverterMap.values()];
+  }
+
+  private _buildPanelData(inverters: DiscoveredInverter[]): PanelData[] {
+    const panels: PanelData[] = [];
+    for (const inv of inverters) {
+      panels.push(...this._buildInverterPanels(inv));
+    }
+    return panels;
+  }
+
+  private _buildInverterPanels(inv: DiscoveredInverter): PanelData[] {
+    const panels: PanelData[] = [];
+    for (const str of inv.strings) {
+      // Skip AC/INV virtual strings - those aren't panels
+      if (str.channel.startsWith("__")) continue;
+
+      panels.push({
+        serial: inv.serial,
+        inverterName: inv.name,
+        stringChannel: str.channel,
+        label: str.label,
+        power: this._readEntityValue(str.entities["Power"]),
+        voltage: this._readEntityValue(str.entities["Voltage"]),
+        current: this._readEntityValue(str.entities["Current"]),
+        yieldDay: this._readEntityValue(str.entities["YieldDay"]),
+        yieldTotal: this._readEntityValue(str.entities["YieldTotal"]),
+        irradiation: this._readEntityValue(str.entities["Irradiation"]),
+        producing: inv.producing,
+        reachable: inv.reachable,
+      });
+    }
+    return panels;
+  }
+
+  private _getEntityValue(
+    inv: DiscoveredInverter,
+    section: string,
+    field: string
+  ): number | null {
+    const key = `__${section.toLowerCase()}__`;
+    const str = inv.strings.find((s) => s.channel === key);
+    if (!str) return null;
+    return this._readEntityValue(str.entities[field]);
+  }
+
+  private _readEntityValue(entityId: string | undefined): number | null {
+    if (!entityId) return null;
+    const entity = this.hass.states[entityId];
+    if (!entity) return null;
+    const val = parseFloat(entity.state);
+    return isNaN(val) ? null : val;
   }
 }
 
